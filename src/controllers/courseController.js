@@ -44,7 +44,7 @@ async function listAdminCourses(req, res) {
 async function createCourse(req, res) {
   try {
     const payload = req.body || {};
-    const thumbnail = req.file ? `/uploads/courses/${req.file.filename}` : payload.thumbnail;
+    const thumbnail = req.uploadedThumbnail?.url || payload.thumbnail;
 
     const result = await courseService.createCourse({
       ...payload,

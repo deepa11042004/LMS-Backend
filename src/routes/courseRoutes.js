@@ -1,5 +1,3 @@
-const fs = require('fs');
-const path = require('path');
 const express = require('express');
 const multer = require('multer');
 
@@ -9,26 +7,51 @@ const lessonController = require('../controllers/lessonController');
 const authMiddleware = require('../middleware/authMiddleware');
 const requireRole = require('../middleware/requireRole');
 const roles = require('../constants/roles');
+const {
+  ALLOWED_IMAGE_MIME_TYPES,
+  uploadCourseThumbnail,
+} = require('../utils/s3CourseThumbnail');
 
 const router = express.Router();
 
-const uploadsDir = path.join(process.cwd(), 'uploads', 'courses');
-fs.mkdirSync(uploadsDir, { recursive: true });
+const storage = multer.memoryStorage();
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => cb(null, uploadsDir),
-  filename: (req, file, cb) => {
-    const extension = path.extname(file.originalname || '').slice(0, 10);
-    cb(null, `course-${Date.now()}-${Math.round(Math.random() * 1e9)}${extension}`);
-  },
-});
+const fileFilter = (req, file, cb) => {
+  if (!file || ALLOWED_IMAGE_MIME_TYPES.has(String(file.mimetype || '').toLowerCase())) {
+    return cb(null, true);
+  }
+
+  const err = new Error('Thumbnail must be a JPG, PNG, WEBP, or GIF image.');
+  err.status = 400;
+  return cb(err);
+};
 
 const upload = multer({
   storage,
+  fileFilter,
   limits: {
     fileSize: 10 * 1024 * 1024,
   },
 });
+
+async function uploadThumbnailToS3(req, res, next) {
+  try {
+    if (!req.file) {
+      return next();
+    }
+
+    const uploadedThumbnail = await uploadCourseThumbnail({
+      buffer: req.file.buffer,
+      contentType: req.file.mimetype,
+      originalName: req.file.originalname,
+    });
+
+    req.uploadedThumbnail = uploadedThumbnail;
+    return next();
+  } catch (err) {
+    return next(err);
+  }
+}
 
 /**
  * @openapi
@@ -114,6 +137,8 @@ router.get(
  *                 type: integer
  *               thumbnail:
  *                 type: string
+ *                 format: uri
+ *                 description: Public thumbnail URL. For multipart route this is auto-filled from uploaded S3 object.
  *     responses:
  *       201:
  *         description: Course created successfully
@@ -136,7 +161,7 @@ router.post(
  * /api/admin/courses:
  *   post:
  *     tags: [Courses]
- *     summary: Create course in courses table as draft (multipart with optional thumbnail)
+ *     summary: Create course in courses table as draft (multipart with optional thumbnail uploaded to S3)
  *     security:
  *       - bearerAuth: []
  *     requestBody:
@@ -196,6 +221,7 @@ router.post(
   authMiddleware,
   requireRole(roles.ADMIN, roles.SUPER_ADMIN, roles.INSTRUCTOR),
   upload.single('thumbnail'),
+  uploadThumbnailToS3,
   courseController.createCourse
 );
 

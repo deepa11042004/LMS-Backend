@@ -52,6 +52,12 @@ AUTH_DB_NAME=bserc_core_db
 LMS_DB_NAME=lms_core_db
 
 DB_CONNECTION_LIMIT=10
+
+AWS_REGION=ap-south-1
+AWS_S3_BUCKET=your-public-bucket-name
+AWS_S3_COURSE_THUMBNAIL_PREFIX=courses/thumbnails
+AWS_ACCESS_KEY_ID=your_access_key
+AWS_SECRET_ACCESS_KEY=your_secret_key
 ```
 
 ## Install And Run
@@ -134,6 +140,8 @@ Allowed roles:
 - Auth required.
 - Allowed roles: admin, super_admin, instructor.
 - multipart/form-data with optional thumbnail file.
+- If thumbnail is provided, it is uploaded to S3 and stored as a public URL in courses.thumbnail.
+- Thumbnail object keys are stored under AWS_S3_COURSE_THUMBNAIL_PREFIX (default: courses/thumbnails).
 - New courses are always created as draft (is_published = false).
 
 Required fields:
@@ -269,7 +277,7 @@ Body:
 - Admin builder reorder persistence:
   - PATCH /api/admin/courses/:courseId/modules/reorder
   - PATCH /api/admin/modules/:moduleId/lessons/reorder
-- Thumbnail files are served from /uploads/courses/*.
+- Course thumbnail URLs are returned directly from S3 in API responses.
 
 ## Common Errors
 

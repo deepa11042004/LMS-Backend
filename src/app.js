@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 const swaggerUi = require('swagger-ui-express');
 
 const authRoutes = require('./routes/authRoutes');
@@ -23,7 +22,6 @@ app.use(
 );
 
 app.use(express.json());
-app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
 
 app.get('/', (req, res) => {
   res.send('LMS backend API is running');
