@@ -30,6 +30,21 @@ async function profile(req, res) {
   }
 }
 
+async function updateProfile(req, res) {
+  try {
+    const userId = req.user?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: 'Unauthorized' });
+    }
+
+    const result = await authService.updateProfile(userId, req.body || {});
+    return res.status(result.status).json(result.body);
+  } catch (err) {
+    console.error('Update profile error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
 async function getInstructorProfile(req, res) {
   try {
     const userId = req.user?.userId;
@@ -73,6 +88,7 @@ async function listAssignableInstructors(req, res) {
 module.exports = {
   login,
   profile,
+  updateProfile,
   getInstructorProfile,
   updateInstructorProfile,
   listAssignableInstructors,

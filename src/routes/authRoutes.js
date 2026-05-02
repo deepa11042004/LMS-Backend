@@ -67,6 +67,51 @@ router.get('/profile', authMiddleware, authController.profile);
 
 /**
  * @openapi
+ * /auth/profile:
+ *   put:
+ *     tags: [Auth]
+ *     summary: Update currently authenticated user profile
+ *     security:
+ *       - bearerAuth: []
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               fullName:
+ *                 type: string
+ *               phone:
+ *                 type: string
+ *               city:
+ *                 type: string
+ *               institution:
+ *                 type: string
+ *               bio:
+ *                 type: string
+ *               profilePictureUrl:
+ *                 type: string
+ *               notificationEmail:
+ *                 type: boolean
+ *               notificationWorkshopUpdates:
+ *                 type: boolean
+ *               notificationMarketing:
+ *                 type: boolean
+ *     responses:
+ *       200:
+ *         description: Profile updated successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: User not found
+ */
+router.put('/profile', authMiddleware, authController.updateProfile);
+
+/**
+ * @openapi
  * /auth/instructor-profile:
  *   get:
  *     tags: [Auth]

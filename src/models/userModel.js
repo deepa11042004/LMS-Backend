@@ -20,6 +20,10 @@ async function updateLastLogin(id) {
   await pool.query('UPDATE users SET last_login = NOW() WHERE id = ?', [id]);
 }
 
+async function updateFullName(id, fullName) {
+  await pool.query('UPDATE users SET full_name = ?, updated_at = NOW() WHERE id = ?', [fullName, id]);
+}
+
 async function listActiveInstructors() {
   const [rows] = await pool.query(
     `
@@ -37,5 +41,6 @@ module.exports = {
   findByEmail,
   findById,
   updateLastLogin,
+  updateFullName,
   listActiveInstructors,
 };
