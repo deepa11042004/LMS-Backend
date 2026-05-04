@@ -8,6 +8,8 @@ LMS backend API with role-based authentication and course content management for
 - Manages courses in lms_core_db.courses.
 - Manages modules in lms_core_db.modules.
 - Manages lessons (YouTube-based) in lms_core_db.lessons.
+- Manages enrollments in lms_core_db.enrollments.
+- Manages payment transactions in lms_core_db.payments.
 - Serves Swagger docs for API testing and contract visibility.
 
 ## Database Design
@@ -17,9 +19,11 @@ LMS backend API with role-based authentication and course content management for
 
 - LMS schema: LMS_DB_NAME (example: lms_core_db)
   Used for LMS content tables:
-  - courses (includes is_published draft/publish flag)
+  - courses (includes is_published draft/publish flag and pricing fields)
   - modules (FK course_id -> courses.id, ON DELETE CASCADE)
   - lessons (FK module_id -> modules.id, ON DELETE CASCADE)
+  - enrollments (user-course access records)
+  - payments (transaction records linked to enrollments)
   - instructor_profiles (dashboard profile metadata for admin/instructor accounts)
 
 ## Migration (Required)
@@ -30,12 +34,14 @@ Run these SQL files on lms_core_db:
 mysql -u root -p < sql/001_create_modules_lessons.sql
 mysql -u root -p < sql/002_add_course_is_published.sql
 mysql -u root -p < sql/003_create_instructor_profiles.sql
+mysql -u root -p < sql/004_create_enrollments_payments.sql
 ```
 
 Migration file:
 - sql/001_create_modules_lessons.sql
 - sql/002_add_course_is_published.sql
 - sql/003_create_instructor_profiles.sql
+- sql/004_create_enrollments_payments.sql
 
 ## Environment Variables
 
@@ -233,6 +239,51 @@ Validation note:
 - Also includes instructor_profile resolved from instructor_id with: name, designation, short_bio, and description.
 - Intended for direct user route rendering where frontend uses course slug URLs.
 
+### POST /api/courses/:courseId/enroll
+
+- Auth required.
+- Enrolls authenticated user in a free course only.
+- Creates or reactivates enrollment with status active.
+- Paid courses return validation error and must use payment flow.
+
+## Payment Endpoints
+
+### POST /api/payment/create-order
+
+- Auth required.
+- Starts paid enrollment flow.
+- Requires course_id in payload.
+- Creates payment row with payment_status = pending.
+- Creates Razorpay order and returns order details.
+
+Body:
+
+```json
+{
+  "course_id": 101
+}
+```
+
+### POST /api/payment/verify-payment
+
+- Auth required.
+- Verifies payment signature.
+- Success flow:
+  - payment_status -> success
+  - enrollment status -> active (create/reactivate)
+  - payments.enrollment_id linked
+- Failed verification sets payment_status -> failed.
+
+Body:
+
+```json
+{
+  "razorpay_order_id": "order_xxx",
+  "razorpay_payment_id": "pay_xxx",
+  "razorpay_signature": "signature_xxx"
+}
+```
+
 ## Module Endpoints
 
 ### GET /api/courses/:courseId/modules
@@ -338,6 +389,8 @@ Body:
 - Admin builder create/update/delete modules: /api/admin/courses/:courseId/modules and /api/admin/modules/:moduleId
 - Admin builder create/update/delete lessons: /api/admin/modules/:moduleId/lessons and /api/admin/lessons/:lessonId
 - Admin builder publish: PATCH /api/admin/courses/:id/publish
+- Free course enrollment: POST /api/courses/:courseId/enroll
+- Paid checkout: POST /api/payment/create-order and POST /api/payment/verify-payment
 - Admin builder reorder persistence:
   - PATCH /api/admin/courses/:courseId/modules/reorder
   - PATCH /api/admin/modules/:moduleId/lessons/reorder

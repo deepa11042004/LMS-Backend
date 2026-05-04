@@ -48,6 +48,7 @@ const formatCourse = (course) => ({
   price: course.price === null || course.price === undefined ? null : Number(course.price),
   discount_price:
     course.discount_price === null || course.discount_price === undefined ? null : Number(course.discount_price),
+  is_free: Number(course.is_free) === 1,
   is_paid: Number(course.is_paid) === 1,
   lifetime_access: Number(course.lifetime_access) === 1,
   certificate_available: Number(course.certificate_available) === 1,
@@ -156,7 +157,11 @@ async function createCourse(payload = {}) {
   const instructorId = toNullableInteger(payload.instructor_id ?? payload.instructorId);
   const duration = toNullableInteger(payload.total_duration_minutes ?? payload.totalDurationMinutes) ?? 0;
 
-  const isPaid = toBoolean(payload.is_paid ?? payload.isPaid, (priceInput || 0) > 0);
+  const requestedIsFree = toBoolean(payload.is_free ?? payload.isFree, false);
+  const inferredIsFreeFromPrice = (priceInput ?? 0) <= 0;
+  const isFree = requestedIsFree || inferredIsFreeFromPrice;
+  const isPaid = !isFree;
+
   const lifetimeAccess = toBoolean(payload.lifetime_access ?? payload.lifetimeAccess, true);
   const certificateAvailable = toBoolean(payload.certificate_available ?? payload.certificateAvailable, true);
 
@@ -185,17 +190,22 @@ async function createCourse(payload = {}) {
     return { status: 400, body: { message: 'total_duration_minutes must be greater than or equal to 0.' } };
   }
 
-  const price = isPaid ? (priceInput ?? 0) : 0;
+  const price = isFree ? 0 : (priceInput ?? 0);
+  const discountPrice = isFree ? null : discountInput;
 
   if (price < 0) {
     return { status: 400, body: { message: 'Price must be greater than or equal to 0.' } };
   }
 
-  if (discountInput !== null && discountInput < 0) {
+  if (!isFree && price <= 0) {
+    return { status: 400, body: { message: 'Paid course price must be greater than 0.' } };
+  }
+
+  if (discountPrice !== null && discountPrice < 0) {
     return { status: 400, body: { message: 'Discount price must be greater than or equal to 0.' } };
   }
 
-  if (discountInput !== null && discountInput > price) {
+  if (discountPrice !== null && discountPrice > price) {
     return { status: 400, body: { message: 'Discount price cannot be greater than price.' } };
   }
 
@@ -214,8 +224,9 @@ async function createCourse(payload = {}) {
     language,
     thumbnail,
     price,
-    discount_price: discountInput,
+    discount_price: discountPrice,
     currency,
+    is_free: isFree ? 1 : 0,
     is_paid: isPaid ? 1 : 0,
     lifetime_access: lifetimeAccess ? 1 : 0,
     certificate_available: certificateAvailable ? 1 : 0,

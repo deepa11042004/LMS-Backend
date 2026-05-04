@@ -42,6 +42,14 @@ const options = {
         name: 'Lessons',
         description: 'Module lesson management endpoints backed by lms_core_db.lessons',
       },
+      {
+        name: 'Enrollments',
+        description: 'Course access management endpoints backed by lms_core_db.enrollments',
+      },
+      {
+        name: 'Payments',
+        description: 'Payment order and verification endpoints backed by lms_core_db.payments',
+      },
     ],
   },
   apis: ['./src/routes/*.js'],

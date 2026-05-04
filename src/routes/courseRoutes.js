@@ -4,6 +4,7 @@ const multer = require('multer');
 const courseController = require('../controllers/courseController');
 const moduleController = require('../controllers/moduleController');
 const lessonController = require('../controllers/lessonController');
+const enrollmentController = require('../controllers/enrollmentController');
 const authMiddleware = require('../middleware/authMiddleware');
 const requireRole = require('../middleware/requireRole');
 const roles = require('../constants/roles');
@@ -64,6 +65,34 @@ async function uploadThumbnailToS3(req, res, next) {
  *         description: Courses fetched successfully
  */
 router.get('/courses', courseController.listCourses);
+
+/**
+ * @openapi
+ * /api/courses/{courseId}/enroll:
+ *   post:
+ *     tags: [Enrollments]
+ *     summary: Enroll authenticated user in a free course
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: courseId
+ *         required: true
+ *         schema:
+ *           type: integer
+ *     responses:
+ *       200:
+ *         description: User already enrolled
+ *       201:
+ *         description: Enrollment activated successfully
+ *       400:
+ *         description: Validation error or paid course
+ *       401:
+ *         description: Unauthorized
+ *       404:
+ *         description: Course not found
+ */
+router.post('/courses/:courseId/enroll', authMiddleware, enrollmentController.enrollInCourse);
 
 /**
  * @openapi
