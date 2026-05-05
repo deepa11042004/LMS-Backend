@@ -135,6 +135,24 @@ async function publishCourse(req, res) {
   }
 }
 
+async function updateCourse(req, res) {
+  try {
+    const result = await courseService.updateCourse(req.params.id, req.body || {});
+
+    if (!result.body.course) {
+      return res.status(result.status).json(result.body);
+    }
+
+    return res.status(result.status).json({
+      ...result.body,
+      course: toPublicCourse(result.body.course, req),
+    });
+  } catch (err) {
+    console.error('Update course error:', err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+}
+
 async function listMyLearningCourses(req, res) {
   try {
     const userId = req.user?.userId;
@@ -152,6 +170,7 @@ module.exports = {
   listCourses,
   listAdminCourses,
   createCourse,
+  updateCourse,
   getCourseFull,
   getCourseFullBySlug,
   publishCourse,

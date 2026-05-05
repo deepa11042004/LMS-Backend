@@ -195,6 +195,49 @@ async function setPublishedStatus(id, isPublished) {
   );
 }
 
+async function updateCourse(id, payload) {
+  await lmsDB.query(
+    `UPDATE courses
+     SET title = ?,
+         slug = ?,
+         subtitle = ?,
+         description = ?,
+         category = ?,
+         level = ?,
+         language = ?,
+         price = ?,
+         discount_price = ?,
+         currency = ?,
+         is_free = ?,
+         is_paid = ?,
+         lifetime_access = ?,
+         certificate_available = ?,
+         is_published = ?,
+         total_duration_minutes = ?,
+         updated_at = CURRENT_TIMESTAMP
+     WHERE id = ?`,
+    [
+      payload.title,
+      payload.slug,
+      payload.subtitle,
+      payload.description,
+      payload.category,
+      payload.level,
+      payload.language,
+      payload.price,
+      payload.discount_price,
+      payload.currency,
+      payload.is_free,
+      payload.is_paid,
+      payload.lifetime_access,
+      payload.certificate_available,
+      payload.is_published,
+      payload.total_duration_minutes,
+      id,
+    ]
+  );
+}
+
 module.exports = {
   listCourses,
   findBySlug,
@@ -202,4 +245,5 @@ module.exports = {
   findById,
   createCourse,
   setPublishedStatus,
+  updateCourse,
 };

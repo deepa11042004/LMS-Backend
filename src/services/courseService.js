@@ -342,6 +342,94 @@ async function publishCourse(courseIdValue) {
   };
 }
 
+async function updateCourse(courseIdValue, payload = {}) {
+  const courseId = toNullableInteger(courseIdValue);
+
+  if (!Number.isInteger(courseId) || courseId <= 0) {
+    return { status: 400, body: { message: 'Valid course id is required.' } };
+  }
+
+  const course = await courseModel.findById(courseId);
+  if (!course) {
+    return { status: 404, body: { message: 'Course not found.' } };
+  }
+
+  const title = normalizeText(payload.title || course.title);
+  const slug = normalizeText(payload.slug || course.slug);
+  const subtitle = normalizeNullableText(payload.subtitle !== undefined ? payload.subtitle : course.subtitle);
+  const description = normalizeNullableText(payload.description !== undefined ? payload.description : course.description);
+  const category = normalizeNullableText(payload.category !== undefined ? payload.category : course.category);
+  const level = normalizeText(payload.level || course.level);
+  const language = normalizeText(payload.language || course.language);
+  const currency = normalizeText(payload.currency || course.currency || 'INR').toUpperCase();
+
+  if (!title) return { status: 400, body: { message: 'Title is required.' } };
+  if (!slug) return { status: 400, body: { message: 'Slug is required.' } };
+  if (!ALLOWED_LEVELS.has(level)) {
+    return { status: 400, body: { message: 'Level must be Beginner, Intermediate, or Advanced.' } };
+  }
+
+  const priceInput = payload.price !== undefined ? toNullableNumber(payload.price) : Number(course.price ?? 0);
+  const discountInput = payload.discount_price !== undefined
+    ? toNullableNumber(payload.discount_price)
+    : toNullableNumber(course.discount_price);
+  const duration = payload.total_duration_minutes !== undefined
+    ? (toNullableInteger(payload.total_duration_minutes) ?? 0)
+    : Number(course.total_duration_minutes || 0);
+
+  const isPublishedRaw = payload.is_published !== undefined ? payload.is_published : course.is_published;
+  const isPublished = toBoolean(isPublishedRaw, false);
+
+  const price = priceInput ?? 0;
+  const discountPrice = discountInput;
+  const isFree = price <= 0;
+  const isPaid = !isFree;
+
+  const lifetimeAccess = payload.lifetime_access !== undefined
+    ? toBoolean(payload.lifetime_access, true)
+    : toBoolean(course.lifetime_access, true);
+  const certificateAvailable = payload.certificate_available !== undefined
+    ? toBoolean(payload.certificate_available, true)
+    : toBoolean(course.certificate_available, true);
+
+  // Check slug uniqueness only if it changed
+  if (slug !== normalizeText(course.slug)) {
+    const existing = await courseModel.findBySlug(slug);
+    if (existing && Number(existing.id) !== courseId) {
+      return { status: 409, body: { message: 'A course with this slug already exists.' } };
+    }
+  }
+
+  await courseModel.updateCourse(courseId, {
+    title,
+    slug,
+    subtitle,
+    description,
+    category,
+    level,
+    language,
+    price,
+    discount_price: discountPrice,
+    currency,
+    is_free: isFree ? 1 : 0,
+    is_paid: isPaid ? 1 : 0,
+    lifetime_access: lifetimeAccess ? 1 : 0,
+    certificate_available: certificateAvailable ? 1 : 0,
+    is_published: isPublished ? 1 : 0,
+    total_duration_minutes: duration,
+  });
+
+  const updated = await courseModel.findById(courseId);
+
+  return {
+    status: 200,
+    body: {
+      message: 'Course updated successfully',
+      course: formatCourse(updated),
+    },
+  };
+}
+
 async function listMyLearningCourses(userIdValue) {
   const userId = toNullableInteger(userIdValue);
 
@@ -402,6 +490,7 @@ async function listMyLearningCourses(userIdValue) {
 module.exports = {
   listCourses,
   createCourse,
+  updateCourse,
   getCourseFull,
   getCourseFullBySlug,
   publishCourse,

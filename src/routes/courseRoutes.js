@@ -291,6 +291,80 @@ router.patch(
 
 /**
  * @openapi
+ * /api/admin/courses/{id}:
+ *   put:
+ *     tags: [Courses]
+ *     summary: Update a course (title, slug, description, pricing, status, etc.)
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: integer
+ *         description: Course ID
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               title:
+ *                 type: string
+ *               slug:
+ *                 type: string
+ *               subtitle:
+ *                 type: string
+ *               description:
+ *                 type: string
+ *               category:
+ *                 type: string
+ *               level:
+ *                 type: string
+ *                 enum: [Beginner, Intermediate, Advanced]
+ *               language:
+ *                 type: string
+ *               price:
+ *                 type: number
+ *               discount_price:
+ *                 type: number
+ *               currency:
+ *                 type: string
+ *               is_paid:
+ *                 type: boolean
+ *               lifetime_access:
+ *                 type: boolean
+ *               certificate_available:
+ *                 type: boolean
+ *               is_published:
+ *                 type: boolean
+ *               total_duration_minutes:
+ *                 type: integer
+ *     responses:
+ *       200:
+ *         description: Course updated successfully
+ *       400:
+ *         description: Validation error
+ *       401:
+ *         description: Unauthorized
+ *       403:
+ *         description: Forbidden
+ *       404:
+ *         description: Course not found
+ *       409:
+ *         description: Slug already in use by another course
+ */
+router.put(
+  '/admin/courses/:id',
+  authMiddleware,
+  requireRole(roles.ADMIN, roles.SUPER_ADMIN, roles.INSTRUCTOR),
+  courseController.updateCourse
+);
+
+/**
+ * @openapi
  * /api/courses/{courseId}/modules:
  *   get:
  *     tags: [Modules]
