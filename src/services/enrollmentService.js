@@ -75,6 +75,8 @@ async function ensureActiveEnrollment({ userId, courseId }, runner = lmsDB, opti
       forUpdate: Boolean(options.forUpdate),
     });
 
+    await courseModel.syncEnrolledStudents(normalizedCourseId, runner);
+
     return {
       enrollment: created,
       created: true,
@@ -88,6 +90,8 @@ async function ensureActiveEnrollment({ userId, courseId }, runner = lmsDB, opti
     const reactivated = await enrollmentModel.findById(existing.id, runner, {
       forUpdate: Boolean(options.forUpdate),
     });
+
+    await courseModel.syncEnrolledStudents(normalizedCourseId, runner);
 
     return {
       enrollment: reactivated,

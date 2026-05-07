@@ -240,6 +240,21 @@ async function updateCourse(id, payload) {
   );
 }
 
+async function syncEnrolledStudents(courseId, runner = lmsDB) {
+  await runner.query(
+    `UPDATE courses c
+     SET c.enrolled_students = (
+       SELECT COUNT(*)
+       FROM enrollments e
+       WHERE e.course_id = c.id
+         AND e.status IN ('active', 'completed')
+     ),
+         c.updated_at = CURRENT_TIMESTAMP
+     WHERE c.id = ?`,
+    [courseId]
+  );
+}
+
 module.exports = {
   listCourses,
   findBySlug,
@@ -248,4 +263,5 @@ module.exports = {
   createCourse,
   setPublishedStatus,
   updateCourse,
+  syncEnrolledStudents,
 };
